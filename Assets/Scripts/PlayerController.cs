@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class PlayerController : MonoBehaviour
 {
@@ -15,9 +16,15 @@ public class PlayerController : MonoBehaviour
     public float lerpTime; //time from current to run
 
     private CharacterController myController;
+    
+    //Wall Jump
     private Quaternion myRotation; //rotation of the player
     public bool hasJump;
     
+    //Coin Pickup
+    public int coinScore;
+    public TMP_Text coinText;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -113,5 +120,15 @@ public class PlayerController : MonoBehaviour
                 ySpeed = jumpForce;
             }
         }
+    }
+
+    private void OnTriggerEnter(Collider other) 
+    {
+        if (other.transform.tag == "Coin")
+        {
+            coinScore++;
+            coinText.text = coinScore.ToString();
+            Destroy(other.gameObject);
+        }        
     }
 }
