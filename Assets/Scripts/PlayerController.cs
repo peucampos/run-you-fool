@@ -29,7 +29,7 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         myController = GetComponent<CharacterController>();
-        myRotation = transform.rotation;
+        myRotation = transform.rotation;        
     }
 
     // Update is called once per frame
@@ -99,7 +99,7 @@ public class PlayerController : MonoBehaviour
     }
 
     void GroundLanding()
-    {        
+    {
         if (myRotation != transform.rotation && myController.isGrounded)
         {
             transform.rotation = myRotation;
@@ -128,7 +128,8 @@ public class PlayerController : MonoBehaviour
         {
             coinScore++;
             coinText.text = coinScore.ToString();
-            Destroy(other.gameObject);
+            Destroy(other.gameObject);            
+            
         }        
     }
 }
