@@ -6,6 +6,8 @@ using System;
 
 public class PlayerController : MonoBehaviour
 {
+    private CharacterController myController;
+
     //Movement & Physics
     public float gravityForce;
     public float ySpeed; //vertical speed
@@ -16,10 +18,7 @@ public class PlayerController : MonoBehaviour
     public float forwardSpeed;
     public float runSpeed;
     public float lerpTime; //time from current to run
-    public bool idle;
-
-    private CharacterController myController;
-    
+        
     //Wall Jump
     private Quaternion myRotation; //rotation of the player
     public bool hasJump;
@@ -30,37 +29,38 @@ public class PlayerController : MonoBehaviour
 
     //Animation
     public Animator myAnimator;
+    private const string ANIM_XSPEED = "XSpeed";
+    private const string ANIM_YSPEED = "YSpeed";
+    private const string ANIM_ISGROUNDED= "IsGrounded";
+    private const string ANIM_ISWALLED = "IsWalled";
 
-    // Start is called before the first frame update
+    //Debug
+    public bool debugIsGrounded;
+    
     void Start()
     {
         myController = GetComponent<CharacterController>();
         myRotation = transform.rotation;   
-        myAnimator = GetComponent<Animator>();
     }
 
     // Update is called once per frame
     void FixedUpdate()
     {
-        AnimationApply();
         MyGravity();
         Jump();
         ForwardMovement();
         SpeedApply();
-    }
+        GroundLanding();
 
-    private void AnimationApply()
-    {
-        myAnimator.SetBool("Walking", !idle);
+        debugIsGrounded = myRotation != transform.rotation && myController.isGrounded;
     }
 
     void Update() 
     {
-        if (Input.GetButtonUp("Jump"))
+        if (Input.GetButtonUp("Fire1"))
             hasJump = false;
 
-        if (Input.GetButtonDown("Fire1"))
-            idle = !idle;
+        myAnimator.SetBool(ANIM_ISGROUNDED, myController.isGrounded);
     }
 
     void MyGravity()
@@ -71,7 +71,7 @@ public class PlayerController : MonoBehaviour
 
     void Jump()
     {
-        if (Input.GetButton("Jump"))
+        if (Input.GetButton("Fire1"))
         {
             if (myController.isGrounded && !hasJump)
             {
@@ -94,33 +94,20 @@ public class PlayerController : MonoBehaviour
     {
         if (myController.isGrounded)
         {
-            if (idle)
-            {
-                forwardSpeed = 0;
-            }
+            if (forwardSpeed <= runSpeed - 0.1f || forwardSpeed >= runSpeed + 0.1f)
+                forwardSpeed = Mathf.Lerp(forwardSpeed, runSpeed, lerpTime);
             else
-            {
-                if (forwardSpeed <= runSpeed - 0.1f || forwardSpeed >= runSpeed + 0.1f)
-                    forwardSpeed = Mathf.Lerp(forwardSpeed, runSpeed, lerpTime);
-                else
-                    forwardSpeed = runSpeed;
-            }
+                forwardSpeed = runSpeed;
         }
     }
 
     void SpeedApply()
     {
-        myController.Move(transform.forward * forwardSpeed * Time.deltaTime);
+        myController.Move(transform.forward * forwardSpeed * Time.deltaTime);   
+        myAnimator.SetFloat(ANIM_XSPEED, myController.velocity.x);
         myController.Move(new Vector3(0f, ySpeed, 0f) * Time.deltaTime);
+        myAnimator.SetFloat(ANIM_YSPEED, myController.velocity.y);
     }
-
-    void OnControllerColliderHit(ControllerColliderHit hit) 
-    {
-        //had to change Character Controller Skin Width to 0.0001 to fix isGrounded
-        GroundLanding();
-        WallJump(hit);
-    }
-
     void GroundLanding()
     {
         if (myRotation != transform.rotation && myController.isGrounded)
@@ -129,21 +116,25 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    void OnControllerColliderHit(ControllerColliderHit hit) 
+    {
+        WallJump(hit);
+    }
+
     void WallJump(ControllerColliderHit hitSent)    
     {
-        if (!idle)
+        if (!myController.isGrounded && hitSent.normal.y < 0.1f && hitSent.normal.y > -0.1f)
         {
-            if (!myController.isGrounded && hitSent.normal.y < 0.1f && hitSent.normal.y > -0.1f)
+            myAnimator.SetBool(ANIM_ISWALLED, true);
+            if (Input.GetButton("Fire1") && !hasJump)
             {
-                if (Input.GetButton("Jump") && !hasJump)
-                {
-                    hasJump = true;
-                    transform.forward = hitSent.normal;
-                    transform.rotation = Quaternion.Euler(new Vector3(0, transform.rotation.eulerAngles.y, 0));
-                    forwardSpeed = runSpeed;
-                    hangTimer = hangTime;
-                    ySpeed = jumpForce;
-                }
+                hasJump = true;
+                transform.forward = hitSent.normal;
+                transform.rotation = Quaternion.Euler(new Vector3(0, transform.rotation.eulerAngles.y, 0));
+                forwardSpeed = runSpeed;
+                hangTimer = hangTime;
+                ySpeed = jumpForce;
+                myAnimator.SetBool(ANIM_ISWALLED, false);
             }
         }
     }
