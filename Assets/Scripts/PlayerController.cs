@@ -2,9 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using System;
 
 public class PlayerController : MonoBehaviour
 {
+    //Movement & Physics
     public float gravityForce;
     public float ySpeed; //vertical speed
     public float jumpForce;
@@ -14,6 +16,7 @@ public class PlayerController : MonoBehaviour
     public float forwardSpeed;
     public float runSpeed;
     public float lerpTime; //time from current to run
+    public bool idle;
 
     private CharacterController myController;
     
@@ -25,26 +28,39 @@ public class PlayerController : MonoBehaviour
     public int coinScore;
     public TMP_Text coinText;
 
+    //Animation
+    public Animator myAnimator;
+
     // Start is called before the first frame update
     void Start()
     {
         myController = GetComponent<CharacterController>();
-        myRotation = transform.rotation;        
+        myRotation = transform.rotation;   
+        myAnimator = GetComponent<Animator>();
     }
 
     // Update is called once per frame
     void FixedUpdate()
     {
+        AnimationApply();
         MyGravity();
         Jump();
         ForwardMovement();
         SpeedApply();
     }
 
+    private void AnimationApply()
+    {
+        myAnimator.SetBool("Walking", !idle);
+    }
+
     void Update() 
     {
-        if (Input.GetButtonUp("Fire1"))
+        if (Input.GetButtonUp("Jump"))
             hasJump = false;
+
+        if (Input.GetButtonDown("Fire1"))
+            idle = !idle;
     }
 
     void MyGravity()
@@ -55,7 +71,7 @@ public class PlayerController : MonoBehaviour
 
     void Jump()
     {
-        if (Input.GetButton("Fire1"))
+        if (Input.GetButton("Jump"))
         {
             if (myController.isGrounded && !hasJump)
             {
@@ -78,10 +94,17 @@ public class PlayerController : MonoBehaviour
     {
         if (myController.isGrounded)
         {
-            if (forwardSpeed <= runSpeed - 0.1f || forwardSpeed >= runSpeed + 0.1f)
-                forwardSpeed = Mathf.Lerp(forwardSpeed, runSpeed, lerpTime);
+            if (idle)
+            {
+                forwardSpeed = 0;
+            }
             else
-                forwardSpeed = runSpeed;
+            {
+                if (forwardSpeed <= runSpeed - 0.1f || forwardSpeed >= runSpeed + 0.1f)
+                    forwardSpeed = Mathf.Lerp(forwardSpeed, runSpeed, lerpTime);
+                else
+                    forwardSpeed = runSpeed;
+            }
         }
     }
 
@@ -108,16 +131,19 @@ public class PlayerController : MonoBehaviour
 
     void WallJump(ControllerColliderHit hitSent)    
     {
-        if (!myController.isGrounded && hitSent.normal.y < 0.1f && hitSent.normal.y > -0.1f)
+        if (!idle)
         {
-            if (Input.GetButton("Fire1") && !hasJump)
+            if (!myController.isGrounded && hitSent.normal.y < 0.1f && hitSent.normal.y > -0.1f)
             {
-                hasJump = true;
-                transform.forward = hitSent.normal;
-                transform.rotation = Quaternion.Euler(new Vector3(0,transform.rotation.eulerAngles.y, 0));
-                forwardSpeed = runSpeed;
-                hangTimer = hangTime;
-                ySpeed = jumpForce;
+                if (Input.GetButton("Jump") && !hasJump)
+                {
+                    hasJump = true;
+                    transform.forward = hitSent.normal;
+                    transform.rotation = Quaternion.Euler(new Vector3(0, transform.rotation.eulerAngles.y, 0));
+                    forwardSpeed = runSpeed;
+                    hangTimer = hangTime;
+                    ySpeed = jumpForce;
+                }
             }
         }
     }
