@@ -33,9 +33,6 @@ public class PlayerController : MonoBehaviour
     private const string ANIM_YSPEED = "YSpeed";
     private const string ANIM_ISGROUNDED= "IsGrounded";
     private const string ANIM_ISWALLED = "IsWalled";
-
-    //Debug
-    public bool debugIsGrounded;
     
     void Start()
     {
@@ -50,9 +47,7 @@ public class PlayerController : MonoBehaviour
         Jump();
         ForwardMovement();
         SpeedApply();
-        GroundLanding();
-
-        debugIsGrounded = myRotation != transform.rotation && myController.isGrounded;
+        //GroundLanding();
     }
 
     void Update() 
