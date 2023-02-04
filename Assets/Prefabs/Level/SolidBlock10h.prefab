@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4364945411986832787}
   m_Layer: 0
-  m_Name: SolidBlock10
+  m_Name: SolidBlock10h
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

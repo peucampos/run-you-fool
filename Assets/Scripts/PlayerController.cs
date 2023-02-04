@@ -18,11 +18,13 @@ public class PlayerController : MonoBehaviour
     public float forwardSpeed;
     public float runSpeed;
     public float lerpTime; //time from current to run
-        
+    public bool moveRight;
+    public bool moveLeft;
+
     //Wall Jump
     private Quaternion myRotation; //rotation of the player
     public bool hasJump;
-    
+
     //Coin Pickup
     public int coinScore;
     public TMP_Text coinText;
@@ -31,13 +33,13 @@ public class PlayerController : MonoBehaviour
     public Animator myAnimator;
     private const string ANIM_XSPEED = "XSpeed";
     private const string ANIM_YSPEED = "YSpeed";
-    private const string ANIM_ISGROUNDED= "IsGrounded";
+    private const string ANIM_ISGROUNDED = "IsGrounded";
     private const string ANIM_ISWALLED = "IsWalled";
-    
+
     void Start()
     {
         myController = GetComponent<CharacterController>();
-        myRotation = transform.rotation;   
+        myRotation = transform.rotation;
     }
 
     // Update is called once per frame
@@ -45,12 +47,12 @@ public class PlayerController : MonoBehaviour
     {
         MyGravity();
         Jump();
-        ForwardMovement();
+        GetMovement();
+        MoveX();
         SpeedApply();
-        //GroundLanding();
     }
 
-    void Update() 
+    void Update()
     {
         if (Input.GetButtonUp("Fire1"))
             hasJump = false;
@@ -84,39 +86,61 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
-
-    void ForwardMovement()
+    private void GetMovement()
     {
-        if (myController.isGrounded)
+        if (Input.GetAxis("Horizontal") > 0)
         {
-            if (forwardSpeed <= runSpeed - 0.1f || forwardSpeed >= runSpeed + 0.1f)
-                forwardSpeed = Mathf.Lerp(forwardSpeed, runSpeed, lerpTime);
-            else
-                forwardSpeed = runSpeed;
+            moveRight = true;
+        }
+        else
+        {
+            moveRight = false;
+        }
+
+        if (Input.GetAxis("Horizontal") < 0)
+        {
+            moveLeft = true;
+        }
+        else
+        {
+            moveLeft = false;
+        }
+    }
+
+    private void MoveX()
+    {
+        if (moveRight && moveLeft)
+        {
+            return;
+        }
+
+        if (moveRight)
+        {
+            this.gameObject.transform.Translate(Vector3.forward * forwardSpeed * Time.deltaTime);
+            this.gameObject.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+        }
+
+        if (moveLeft)
+        {
+            this.gameObject.transform.Translate(Vector3.forward * forwardSpeed * Time.deltaTime);
+            this.gameObject.transform.rotation = Quaternion.Euler(0f, -90f, 0f);
         }
     }
 
     void SpeedApply()
     {
-        myController.Move(transform.forward * forwardSpeed * Time.deltaTime);   
+        myController.Move(transform.forward * forwardSpeed * Time.deltaTime);
         myAnimator.SetFloat(ANIM_XSPEED, myController.velocity.x);
         myController.Move(new Vector3(0f, ySpeed, 0f) * Time.deltaTime);
         myAnimator.SetFloat(ANIM_YSPEED, myController.velocity.y);
     }
-    void GroundLanding()
-    {
-        if (myRotation != transform.rotation && myController.isGrounded)
-        {
-            transform.rotation = myRotation;
-        }
-    }
 
-    void OnControllerColliderHit(ControllerColliderHit hit) 
+    void OnControllerColliderHit(ControllerColliderHit hit)
     {
         WallJump(hit);
     }
 
-    void WallJump(ControllerColliderHit hitSent)    
+    void WallJump(ControllerColliderHit hitSent)
     {
         if (!myController.isGrounded && hitSent.normal.y < 0.1f && hitSent.normal.y > -0.1f)
         {
@@ -124,7 +148,6 @@ public class PlayerController : MonoBehaviour
             if (Input.GetButton("Fire1") && !hasJump)
             {
                 hasJump = true;
-                transform.forward = hitSent.normal;
                 transform.rotation = Quaternion.Euler(new Vector3(0, transform.rotation.eulerAngles.y, 0));
                 forwardSpeed = runSpeed;
                 hangTimer = hangTime;
@@ -134,14 +157,14 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void OnTriggerEnter(Collider other) 
+    private void OnTriggerEnter(Collider other)
     {
         if (other.transform.tag == "Coin")
         {
             coinScore++;
             coinText.text = coinScore.ToString();
-            Destroy(other.gameObject);            
-            
-        }        
+            Destroy(other.gameObject);
+
+        }
     }
 }
