@@ -6,6 +6,9 @@ TagManager:
   tags:
   - Coin
   - Wall
+  - DeathZone
+  - Block
+  - Exit
   layers:
   - Default
   - TransparentFX

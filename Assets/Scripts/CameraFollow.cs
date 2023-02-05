@@ -23,8 +23,11 @@ public class CameraFollow : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        YFollow();
-        SetCameraPosition();
+        if (PlayerController.isAlive)
+        {
+            YFollow();
+            SetCameraPosition();
+        }
     }
 
     void SetCameraPosition()

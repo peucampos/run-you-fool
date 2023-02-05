@@ -1,33 +1,26 @@
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
-using TMPro;
-using System;
+using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
+    //Movement
     private CharacterController myController;
-
-    //Movement & Physics
-    public float gravityForce;
-    public float ySpeed; //vertical speed
-    public float jumpForce;
-    public float hangTime; //maximun height based on holding the jump
-    public float hangTimer;
-    public float gravityModifier; //to allow higher jumps
-    public float forwardSpeed;
-    public float runSpeed;
-    public float lerpTime; //time from current to run
+    public float gravityForce = 9.8f;
+    public float xSpeed = 5f;
+    public float ySpeed;
     public bool moveRight;
     public bool moveLeft;
 
-    //Wall Jump
-    private Quaternion myRotation; //rotation of the player
-    public bool hasJump;
-
-    //Coin Pickup
-    public int coinScore;
-    public TMP_Text coinText;
+    //Jump
+    public float jumpForce = 3f;
+    public float hangTime = 0.5f; //maximun height based on holding the jump
+    public float gravityModifier = 50f; //to allow higher jumps
+    public float hangTimer;
+    public bool hasJump = false;
 
     //Animation
     public Animator myAnimator;
@@ -36,28 +29,35 @@ public class PlayerController : MonoBehaviour
     private const string ANIM_ISGROUNDED = "IsGrounded";
     private const string ANIM_ISWALLED = "IsWalled";
 
-    void Start()
+    //GameOver
+    public static bool isAlive;
+    public GameObject gameOverText;
+
+    //Head Block
+    public ParticleSystem lavaBlockParticle;
+
+    private void Start()
     {
+        isAlive = true;
         myController = GetComponent<CharacterController>();
-        myRotation = transform.rotation;
     }
 
-    // Update is called once per frame
+    private void Update()
+    {
+
+        if (Input.GetButtonUp("Fire1") || Input.GetButtonUp("Jump"))
+            hasJump = false;
+
+        myAnimator.SetBool(ANIM_ISGROUNDED, myController.isGrounded);
+    }
+
     void FixedUpdate()
     {
         MyGravity();
         Jump();
         GetMovement();
-        MoveX();
+        Turn();
         SpeedApply();
-    }
-
-    void Update()
-    {
-        if (Input.GetButtonUp("Fire1"))
-            hasJump = false;
-
-        myAnimator.SetBool(ANIM_ISGROUNDED, myController.isGrounded);
     }
 
     void MyGravity()
@@ -68,7 +68,7 @@ public class PlayerController : MonoBehaviour
 
     void Jump()
     {
-        if (Input.GetButton("Fire1"))
+        if (Input.GetButton("Fire1") || Input.GetButton("Jump"))
         {
             if (myController.isGrounded && !hasJump)
             {
@@ -88,83 +88,74 @@ public class PlayerController : MonoBehaviour
     }
     private void GetMovement()
     {
-        if (Input.GetAxis("Horizontal") > 0)
-        {
-            moveRight = true;
-        }
-        else
-        {
-            moveRight = false;
-        }
+        moveRight = Input.GetKey(KeyCode.D);
+        moveLeft = Input.GetKey(KeyCode.A);
 
-        if (Input.GetAxis("Horizontal") < 0)
-        {
-            moveLeft = true;
-        }
+        if (moveRight || moveLeft)
+            xSpeed = 5f;
         else
-        {
-            moveLeft = false;
-        }
+            xSpeed = 0f;
     }
 
-    private void MoveX()
+    private void Turn()
     {
         if (moveRight && moveLeft)
-        {
             return;
-        }
 
         if (moveRight)
-        {
-            this.gameObject.transform.Translate(Vector3.forward * forwardSpeed * Time.deltaTime);
-            this.gameObject.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
-        }
+            transform.rotation = Quaternion.Euler(0f, 90f, 0f);
 
         if (moveLeft)
-        {
-            this.gameObject.transform.Translate(Vector3.forward * forwardSpeed * Time.deltaTime);
-            this.gameObject.transform.rotation = Quaternion.Euler(0f, -90f, 0f);
-        }
+            transform.rotation = Quaternion.Euler(0f, -90f, 0f);
+
     }
 
     void SpeedApply()
     {
-        myController.Move(transform.forward * forwardSpeed * Time.deltaTime);
+        myController.Move(transform.forward * xSpeed * Time.deltaTime);
         myAnimator.SetFloat(ANIM_XSPEED, myController.velocity.x);
+
         myController.Move(new Vector3(0f, ySpeed, 0f) * Time.deltaTime);
         myAnimator.SetFloat(ANIM_YSPEED, myController.velocity.y);
     }
 
-    void OnControllerColliderHit(ControllerColliderHit hit)
-    {
-        WallJump(hit);
-    }
-
-    void WallJump(ControllerColliderHit hitSent)
-    {
-        if (!myController.isGrounded && hitSent.normal.y < 0.1f && hitSent.normal.y > -0.1f)
-        {
-            myAnimator.SetBool(ANIM_ISWALLED, true);
-            if (Input.GetButton("Fire1") && !hasJump)
-            {
-                hasJump = true;
-                transform.rotation = Quaternion.Euler(new Vector3(0, transform.rotation.eulerAngles.y, 0));
-                forwardSpeed = runSpeed;
-                hangTimer = hangTime;
-                ySpeed = jumpForce;
-                myAnimator.SetBool(ANIM_ISWALLED, false);
-            }
-        }
-    }
-
     private void OnTriggerEnter(Collider other)
     {
-        if (other.transform.tag == "Coin")
-        {
-            coinScore++;
-            coinText.text = coinScore.ToString();
-            Destroy(other.gameObject);
+        //if (other.transform.tag == "Coin")
+        //{
+        //    coinScore++;
+        //    coinText.text = coinScore.ToString();
+        //    Destroy(other.gameObject);
 
+        //}
+
+        if (other.transform.CompareTag("DeathZone"))
+        {
+            isAlive = false;
+            gameOverText.SetActive(true);
+            StartCoroutine(Death());
         }
+
+        if (other.transform.CompareTag("Block"))
+        {
+            lavaBlockParticle.Play();
+        }
+
+        if (other.transform.CompareTag("Exit"))
+        {
+            StartCoroutine(Exit());
+        }
+    }
+
+    IEnumerator Death()
+    {
+        yield return new WaitForSeconds(3);
+        SceneManager.LoadScene(0);
+    }
+
+    IEnumerator Exit()
+    {
+        yield return new WaitForSeconds(3);
+        SceneManager.LoadScene(0);
     }
 }
